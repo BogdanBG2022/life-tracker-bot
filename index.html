@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мій Трекер</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-2: #0f172a;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --danger: #ef4444;
+      --warn: #f97316;
+      --ok: #22c55e;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px 16px 84px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    h1 { font-size: 20px; margin: 0; }
+    h2 { font-size: 16px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .icon-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .icon-btn:hover { background: #334155; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .muted { color: var(--muted); font-size: 13px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row-wrap { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .kcal-pair {
+      display: flex;
+      align-items: baseline;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin: 4px 0;
+    }
+    .kcal-block {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    input, select, textarea, button {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card-2);
+      color: var(--text);
+      padding: 10px 12px;
+    }
+    input, select, textarea { flex: 1; min-width: 0; }
+    textarea { min-height: 76px; resize: vertical; width: 100%; }
+    button {
+      background: var(--accent);
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: #334155; }
+    button.secondary:hover { background: #475569; }
+    button.danger { background: var(--danger); padding: 6px 10px; font-size: 13px; }
+    button.small { padding: 6px 10px; font-size: 13px; }
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .list-item:last-child { border-bottom: none; }
+    .done-text { text-decoration: line-through; color: var(--muted); }
+    .big-num { font-size: 26px; font-weight: 700; color: var(--ok); }
+    .big-num-warn { font-size: 26px; font-weight: 700; color: var(--warn); }
+    .big-num-danger { font-size: 26px; font-weight: 700; color: var(--danger); }
+    .err-text { color: #fca5a5; font-size: 13px; margin-top: 6px; }
+    .ok-text { color: #86efac; font-size: 13px; margin-top: 6px; }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #334155;
+      color: #e2e8f0;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .tabs button { flex: 1; background: #1e293b; border: 1px solid var(--border); }
+    .tabs button.active { background: var(--accent); border-color: var(--accent); }
+    .drawer-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.65);
+      z-index: 40;
+    }
+    .drawer-backdrop.open { display: block; }
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 240px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 18px 14px;
+      z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-item {
+      width: 100%;
+      text-align: left;
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .field-group {
+      margin-bottom: 10px;
+    }
+    .field-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .bottom-nav {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      padding: 8px;
+      background: #0b1220;
+      border-top: 1px solid var(--border);
+      z-index: 20;
+    }
+    .bottom-nav button {
+      padding: 8px 4px;
+      font-size: 12px;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+    }
+    .bottom-nav button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+  </style>
+</head>
+<body>
+  <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeMealsDrawer()"></div>
+  <aside id="meals-drawer" class="drawer">
+    <h2>Меню харчування</h2>
+    <button class="drawer-item" onclick="openNutritionSettings()">Параметри</button>
+    <button class="secondary" style="width:100%;" onclick="closeMealsDrawer()">Закрити</button>
+  </aside>
+
+  <div id="view-habits" class="view active">
+    <div class="topbar"><h1>Звички</h1></div>
+    <div class="card">
+      <h2>Нова звичка</h2>
+      <div class="row">
+        <input id="habit-input" type="text" placeholder="Наприклад: 8 склянок води" />
+        <button onclick="addHabit()">Додати</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Синхронізація з iCloud / Нагадування</h2>
+      <p class="muted">Встав список задач або звичок (кожна з нового рядка)</p>
+      <textarea id="icloud-text" placeholder="Пробіжка 3 км&#10;Читати 20 сторінок&#10;Не пити каву після 16:00"></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button class="secondary" onclick="syncIcloud()">Синхронізувати</button>
+      </div>
+      <div id="icloud-msg" class="ok-text"></div>
+    </div>
+
+    <div class="card">
+      <h2>Список звичок</h2>
+      <div id="habits-list"></div>
+    </div>
+  </div>
+
+  <div id="view-study" class="view">
+    <div class="topbar"><h1>Навчання</h1></div>
+    <div class="tabs">
+      <button id="tab-school" class="active" onclick="switchStudyTrack('school')">Школа</button>
+      <button id="tab-extra" onclick="switchStudyTrack('extra')">Додаткове</button>
+    </div>
+
+    <div class="card">
+      <h2>Предмети / Напрями</h2>
+      <div class="row">
+        <input id="subject-input" type="text" placeholder="Назва предмета або курсу" />
+        <button onclick="addSubject()">Додати</button>
+      </div>
+      <div id="subjects-list" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Домашні завдання</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <select id="hw-subject-select"></select>
+      </div>
+      <div class="row">
+        <input id="hw-input" type="text" placeholder="Що потрібно зробити" />
+        <button onclick="addHomework()">Додати</button>
+      </div>
+      <div id="hw-list" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Розклад</h2>
+      <div class="row-wrap" style="margin-bottom:8px;">
+        <input id="sched-day" type="text" placeholder="День (Пн)" style="max-width:110px;" />
+        <input id="sched-time" type="text" placeholder="Час (09:00)" style="max-width:120px;" />
+        <input id="sched-title" type="text" placeholder="Заняття" />
+        <button onclick="addSchedule()">Додати</button>
+      </div>
+      <div id="sched-list"></div>
+    </div>
+  </div>
+
+  <div id="view-meals" class="view">
+    <div class="topbar">
+      <h1>Харчування</h1>
+      <button class="icon-btn" title="Меню" onclick="openMealsDrawer()">☰</button>
+    </div>
+
+    <div class="card">
+      <div class="muted">Сьогодні приблизно</div>
+      <div class="kcal-pair">
+        <div class="kcal-block">
+          <span id="meals-total-kcal" class="big-num">0</span>
+          <span class="muted">ккал</span>
+        </div>
+        <div id="meals-remaining-wrap" class="kcal-block" style="display:none;">
+          <span id="meals-remaining-kcal" class="big-num-warn">0</span>
+          <span class="muted">залишилось</span>
+        </div>
+      </div>
+      <div id="meals-total-macros" class="muted">Б: 0 г · Ж: 0 г · В: 0 г</div>
+      <div id="meals-target-hint" class="muted" style="margin-top:4px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Напиши, що з'їв — ШІ оцінить калорії у фоні</h2>
+      <div class="row">
+        <input id="meal-input" type="text" placeholder="Напр. 2 яйця, тост з маслом, кава з молоком" />
+        <button id="meal-btn" onclick="addMeal()">Оцінити</button>
+      </div>
+      <div id="meal-status" class="muted" style="margin-top:8px;"></div>
+      <div id="meal-error" class="err-text"></div>
+    </div>
+
+    <div class="card">
+      <h2>Записи за сьогодні</h2>
+      <div id="meals-list"></div>
+    </div>
+  </div>
+
+  <div id="view-meals-settings" class="view">
+    <div class="topbar">
+      <h1>Параметри харчування</h1>
+      <button class="secondary small" onclick="backToMeals()">Назад</button>
+    </div>
+
+    <div class="card">
+      <h2>Дані для розрахунку норми калорій</h2>
+      <div class="field-group">
+        <label for="goal-age">Вік (років)</label>
+        <input id="goal-age" type="number" min="1" max="120" placeholder="Напр. 20" />
+      </div>
+      <div class="field-group">
+        <label for="goal-height">Зріст (см)</label>
+        <input id="goal-height" type="number" step="0.5" min="50" max="250" placeholder="Напр. 178" />
+      </div>
+      <div class="field-group">
+        <label for="goal-weight">Вага (кг)</label>
+        <input id="goal-weight" type="number" step="0.1" min="10" max="350" placeholder="Напр. 72" />
+      </div>
+      <div class="field-group">
+        <label for="goal-type">Бажаний результат</label>
+        <select id="goal-type">
+          <option value="lose">Скинути вагу</option>
+          <option value="maintain" selected>Залишати незмінним</option>
+          <option value="gain">Набрати масу</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="save-goal-btn" onclick="saveNutritionGoal()">Розрахувати і зберегти</button>
+      </div>
+      <div id="goal-msg" class="ok-text"></div>
+      <div id="goal-err" class="err-text"></div>
+    </div>
+  </div>
+
+  <div id="view-health" class="view">
+    <div class="topbar"><h1>Здоров'я</h1></div>
+    <div class="card">
+      <h2>Сон</h2>
+      <div id="sleep-latest" class="muted" style="margin-bottom:10px;">Ще немає записів про сон</div>
+      <div class="row-wrap">
+        <input id="sleep-hours" type="number" step="0.1" min="0.1" max="24" placeholder="Годин (напр. 7.5)" style="max-width:160px;" />
+        <input id="sleep-source" type="text" value="iPhone / Watch" placeholder="Джерело" />
+        <button onclick="addSleep()">Зберегти</button>
+      </div>
+      <div id="sleep-history" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <div id="view-workouts" class="view">
+    <div class="topbar"><h1>Тренування</h1></div>
+    <div class="card">
+      <h2>Додати тренування (Strava / інше)</h2>
+      <div class="row" style="margin-bottom:8px;">
+        <input id="wo-title" type="text" placeholder="Назва (напр. Ранковий біг)" />
+        <input id="wo-sport" type="text" value="Біг" placeholder="Тип" style="max-width:120px;" />
+      </div>
+      <div class="row-wrap">
+        <input id="wo-dist" type="number" step="0.01" placeholder="Км" style="max-width:110px;" />
+        <input id="wo-dur" type="number" step="1" placeholder="Хв" style="max-width:110px;" />
+        <input id="wo-source" type="text" value="Strava" placeholder="Джерело" style="max-width:130px;" />
+        <button onclick="addWorkout()">Додати</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Останні тренування</h2>
+      <div id="workouts-list"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button id="nav-habits" class="active" onclick="switchView('habits')">Звички</button>
+    <button id="nav-study" onclick="switchView('study')">Навчання</button>
+    <button id="nav-meals" onclick="switchView('meals')">Харчування</button>
+    <button id="nav-health" onclick="switchView('health')">Здоров'я</button>
+    <button id="nav-workouts" onclick="switchView('workouts')">Спорт</button>
+  </nav>
+
+  <script>
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
+    let currentTrack = "school";
+    let mealsPollTimer = null;
+    let prevPendingCount = 0;
+
+    function openMealsDrawer() {
+      document.getElementById("meals-drawer").classList.add("open");
+      document.getElementById("drawer-backdrop").classList.add("open");
+    }
+
+    function closeMealsDrawer() {
+      document.getElementById("meals-drawer").classList.remove("open");
+      document.getElementById("drawer-backdrop").classList.remove("open");
+    }
+
+    function openNutritionSettings() {
+      closeMealsDrawer();
+      switchView("meals-settings");
+      loadNutritionGoalForm();
+    }
+
+    function backToMeals() {
+      switchView("meals");
+    }
+
+    function switchView(name) {
+      closeMealsDrawer();
+      document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".bottom-nav button").forEach(el => el.classList.remove("active"));
+      document.getElementById(`view-${name}`).classList.add("active");
+
+      const navId = name === "meals-settings" ? "nav-meals" : `nav-${name}`;
+      const navBtn = document.getElementById(navId);
+      if (navBtn) navBtn.classList.add("active");
+
+      if (name === "habits") loadHabits();
+      if (name === "study") loadStudy();
+      if (name === "meals") loadMeals();
+      if (name === "health") loadSleep();
+      if (name === "workouts") loadWorkouts();
+    }
+
+    async function api(url, options = {}) {
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+      });
+      if (!res.ok) {
+        let detail = `Помилка сервера (${res.status})`;
+        try {
+          const data = await res.json();
+          if (data.detail) detail = data.detail;
+        } catch (_) {}
+        throw new Error(detail);
+      }
+      return res.json();
+    }
+
+    async function loadHabits() {
+      const items = await api("/api/habits");
+      const box = document.getElementById("habits-list");
+      if (!items.length) {
+        box.innerHTML = `<div class="muted">Поки немає звичок</div>`;
+        return;
+      }
+      box.innerHTML = items.map(h => `
+        <div class="list-item">
+          <label class="row" style="cursor:pointer;">
+            <input type="checkbox" ${h.done ? "checked" : ""} onchange="toggleHabit(${h.id}, this.checked)" />
+            <span class="${h.done ? "done-text" : ""}">${escapeHtml(h.title)}</span>
+          </label>
+          <span class="pill">${h.source === "icloud" ? "iCloud" : "Ручна"}</span>
+        </div>
+      `).join("");
+    }
+
+    async function addHabit() {
+      const inp = document.getElementById("habit-input");
+      if (!inp.value.trim()) return;
+      await api("/api/habits", {
+        method: "POST",
+        body: JSON.stringify({ title: inp.value.trim(), source: "manual" }),
+      });
+      inp.value = "";
+      loadHabits();
+    }
+
+    async function toggleHabit(id, done) {
+      await api(`/api/habits/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ done }),
+      });
+      loadHabits();
+    }
+
+    async function syncIcloud() {
+      const raw = document.getElementById("icloud-text").value;
+      const items = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const res = await api("/api/habits/icloud-sync", {
+        method: "POST",
+        body: JSON.stringify({ items, replace_existing: true }),
+      });
+      document.getElementById("icloud-msg").textContent = `Синхронізовано пунктів: ${res.synced_count}`;
+      loadHabits();
+    }
+
+    function switchStudyTrack(track) {
+      currentTrack = track;
+      document.getElementById("tab-school").classList.toggle("active", track === "school");
+      document.getElementById("tab-extra").classList.toggle("active", track === "extra");
+      loadStudy();
+    }
+
+    async function loadStudy() {
+      const data = await api(`/api/study?track=${currentTrack}`);
+      const subjBox = document.getElementById("subjects-list");
+      const sel = document.getElementById("hw-subject-select");
+
+      if (!data.subjects.length) {
+        subjBox.innerHTML = `<div class="muted">Немає предметів</div>`;
+        sel.innerHTML = `<option value="">Спочатку додай предмет</option>`;
+      } else {
+        subjBox.innerHTML = data.subjects.map(s => `<span class="pill" style="margin:2px;">${escapeHtml(s.name)}</span>`).join("");
+        sel.innerHTML = data.subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+      }
+
+      const hwBox = document.getElementById("hw-list");
+      hwBox.innerHTML = data.homeworks.length
+        ? data.homeworks.map(h => `
+            <div class="list-item">
+              <label class="row" style="cursor:pointer;">
+                <input type="checkbox" ${h.done ? "checked" : ""} onchange="toggleHw(${h.id}, this.checked)" />
+                <span class="${h.done ? "done-text" : ""}"><strong>${escapeHtml(h.subject_name)}:</strong> ${escapeHtml(h.task)}</span>
+              </label>
+            </div>
+          `).join("")
+        : `<div class="muted">Немає домашніх завдань</div>`;
+
+      const schedBox = document.getElementById("sched-list");
+      schedBox.innerHTML = data.schedule.length
+        ? data.schedule.map(sc => `
+            <div class="list-item">
+              <div><strong>${escapeHtml(sc.day_name)}</strong> · ${escapeHtml(sc.time_slot)} — ${escapeHtml(sc.title)}</div>
+            </div>
+          `).join("")
+        : `<div class="muted">Розклад порожній</div>`;
+    }
+
+    async function addSubject() {
+      const inp = document.getElementById("subject-input");
+      if (!inp.value.trim()) return;
+      await api("/api/subjects", {
+        method: "POST",
+        body: JSON.stringify({ name: inp.value.trim(), track: currentTrack }),
+      });
+      inp.value = "";
+      loadStudy();
+    }
+
+    async function addHomework() {
+      const sel = document.getElementById("hw-subject-select");
+      const inp = document.getElementById("hw-input");
+      if (!sel.value || !inp.value.trim()) return;
+      await api("/api/homework", {
+        method: "POST",
+        body: JSON.stringify({ subject_id: Number(sel.value), task: inp.value.trim() }),
+      });
+      inp.value = "";
+      loadStudy();
+    }
+
+    async function toggleHw(id, done) {
+      await api(`/api/homework/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ done }),
+      });
+      loadStudy();
+    }
+
+    async function addSchedule() {
+      const day = document.getElementById("sched-day");
+      const time = document.getElementById("sched-time");
+      const title = document.getElementById("sched-title");
+      if (!title.value.trim()) return;
+      await api("/api/schedule", {
+        method: "POST",
+        body: JSON.stringify({
+          day_name: day.value.trim() || "День",
+          time_slot: time.value.trim() || "00:00",
+          title: title.value.trim(),
+          track: currentTrack,
+        }),
+      });
+      title.value = "";
+      loadStudy();
+    }
+
+    async function loadNutritionGoalForm() {
+      document.getElementById("goal-msg").textContent = "";
+      document.getElementById("goal-err").textContent = "";
+      try {
+        const g = await api("/api/nutrition-goal");
+        if (g) {
+          document.getElementById("goal-age").value = g.age;
+          document.getElementById("goal-height").value = g.height_cm;
+          document.getElementById("goal-weight").value = g.weight_kg;
+          document.getElementById("goal-type").value = g.goal;
+          document.getElementById("goal-msg").textContent = `Поточна норма ШІ: ${g.target_calories} ккал/день`;
+        }
+      } catch (_) {}
+    }
+
+    async function saveNutritionGoal() {
+      const msgEl = document.getElementById("goal-msg");
+      const errEl = document.getElementById("goal-err");
+      const btn = document.getElementById("save-goal-btn");
+      msgEl.textContent = "";
+      errEl.textContent = "";
+
+      const age = parseInt(document.getElementById("goal-age").value, 10);
+      const height_cm = parseFloat(document.getElementById("goal-height").value);
+      const weight_kg = parseFloat(document.getElementById("goal-weight").value);
+      const goal = document.getElementById("goal-type").value;
+
+      if (!age || !height_cm || !weight_kg) {
+        errEl.textContent = "Заповни вік, зріст і вагу.";
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const res = await api("/api/nutrition-goal", {
+          method: "POST",
+          body: JSON.stringify({ age, height_cm, weight_kg, goal }),
+        });
+        msgEl.textContent = `Розраховано і збережено: ${res.target_calories} ккал/день`;
+        await loadMeals();
+      } catch (e) {
+        errEl.textContent = e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function scheduleMealsPoll(hasPending) {
+      if (mealsPollTimer) {
+        clearTimeout(mealsPollTimer);
+        mealsPollTimer = null;
+      }
+      if (hasPending) {
+        mealsPollTimer = setTimeout(() => {
+          loadMeals();
+        }, 2000);
+      }
+    }
+
+    async function loadMeals() {
+      const data = await api("/api/meals");
+      document.getElementById("meals-total-kcal").textContent = `${data.totals.calories}`;
+      document.getElementById("meals-total-macros").textContent =
+        `Б: ${data.totals.protein_g} г · Ж: ${data.totals.fat_g} г · В: ${data.totals.carbs_g} г`;
+
+      const remWrap = document.getElementById("meals-remaining-wrap");
+      const remNum = document.getElementById("meals-remaining-kcal");
+      const hintEl = document.getElementById("meals-target-hint");
+
+      if (data.goal && typeof data.remaining_calories === "number") {
+        remWrap.style.display = "flex";
+        remNum.textContent = `${data.remaining_calories}`;
+        remNum.className = data.remaining_calories < 0 ? "big-num-danger" : "big-num-warn";
+        hintEl.textContent = `Норма ШІ: ${data.goal.target_calories} ккал/день`;
+      } else {
+        remWrap.style.display = "none";
+        hintEl.textContent = "Відкрий ☰ → Параметри, щоб задати норму калорій";
+      }
+
+      const listBox = document.getElementById("meals-list");
+      const pendingCount = data.meals.filter(m => m.status === "pending").length;
+      const statusEl = document.getElementById("meal-status");
+
+      if (pendingCount > 0) {
+        statusEl.textContent = `Рахується у фоні (${pendingCount}) — можна перемикати вкладки, калорії підіб'ються автоматично.`;
+      } else if (prevPendingCount > 0) {
+        statusEl.textContent = `Підрахунок завершено! Підбито ${data.totals.calories} ккал за сьогодні.`;
+      } else {
+        statusEl.textContent = "";
+      }
+      prevPendingCount = pendingCount;
+
+      if (!data.meals.length) {
+        listBox.innerHTML = `<div class="muted">Сьогодні ще немає записів про їжу.</div>`;
+        scheduleMealsPoll(false);
+        return;
+      }
+
+      listBox.innerHTML = data.meals.map(m => {
+        let rightHtml = "";
+        if (m.status === "pending") {
+          rightHtml = `<span class="pill">Рахується...</span>`;
+        } else if (m.status === "error") {
+          rightHtml = `
+            <span class="pill" style="background:#7f1d1d;color:#fecaca;">Помилка</span>
+            <button class="secondary small" onclick="retryMeal(${m.id})">Повторити</button>
+          `;
+        } else {
+          rightHtml = `<strong>~${m.calories} ккал</strong>`;
+        }
+
+        const metaText = m.status === "error" && m.error_msg
+          ? `${escapeHtml(m.created_at)} · ${escapeHtml(m.error_msg)}`
+          : `${escapeHtml(m.created_at)} · Б ${m.protein_g} / Ж ${m.fat_g} / В ${m.carbs_g}`;
+
+        return `
+          <div class="list-item">
+            <div>
+              <div><strong>${escapeHtml(m.description)}</strong></div>
+              <div class="muted">${metaText}</div>
+            </div>
+            <div class="row">
+              ${rightHtml}
+              <button class="danger" onclick="deleteMeal(${m.id})">×</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      scheduleMealsPoll(pendingCount > 0);
+    }
+
+    async function addMeal() {
+      const inp = document.getElementById("meal-input");
+      const errEl = document.getElementById("meal-error");
+      const btn = document.getElementById("meal-btn");
+      errEl.textContent = "";
+      const text = inp.value.trim();
+      if (!text) return;
+
+      btn.disabled = true;
+      try {
+        await api("/api/meals", {
+          method: "POST",
+          body: JSON.stringify({ description: text }),
+        });
+        inp.value = "";
+        await loadMeals();
+      } catch (e) {
+        errEl.textContent = e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function retryMeal(id) {
+      await api(`/api/meals/${id}/retry`, { method: "POST" });
+      await loadMeals();
+    }
+
+    async function deleteMeal(id) {
+      await api(`/api/meals/${id}`, { method: "DELETE" });
+      loadMeals();
+    }
+
+    async function loadSleep() {
+      const data = await api("/api/sleep");
+      const latestEl = document.getElementById("sleep-latest");
+      if (data.latest) {
+        latestEl.innerHTML = `Останній запис: <strong style="color:#f8fafc;">${data.latest.hours} год</strong> (${escapeHtml(data.latest.source)}, ${escapeHtml(data.latest.logged_at)})`;
+      } else {
+        latestEl.textContent = "Ще немає записів про сон";
+      }
+
+      const histEl = document.getElementById("sleep-history");
+      histEl.innerHTML = data.history.map(s => `
+        <div class="list-item">
+          <div><strong>${s.hours} год</strong> <span class="muted">(${escapeHtml(s.source)})</span></div>
+          <div class="muted">${escapeHtml(s.logged_at)}</div>
+        </div>
+      `).join("");
+    }
+
+    async function addSleep() {
+      const h = parseFloat(document.getElementById("sleep-hours").value);
+      const src = document.getElementById("sleep-source").value.trim() || "iPhone / Watch";
+      if (!h || h <= 0) return;
+      await api("/api/sleep", {
+        method: "POST",
+        body: JSON.stringify({ hours: h, source: src }),
+      });
+      document.getElementById("sleep-hours").value = "";
+      loadSleep();
+    }
+
+    async function loadWorkouts() {
+      const items = await api("/api/workouts");
+      const box = document.getElementById("workouts-list");
+      box.innerHTML = items.length
+        ? items.map(w => `
+            <div class="list-item">
+              <div>
+                <div><strong>${escapeHtml(w.title)}</strong> <span class="pill">${escapeHtml(w.sport_type)}</span></div>
+                <div class="muted">${w.distance_km} км · ${w.duration_min} хв · ${escapeHtml(w.source)} · ${escapeHtml(w.logged_at)}</div>
+              </div>
+            </div>
+          `).join("")
+        : `<div class="muted">Поки немає тренувань</div>`;
+    }
+
+    async function addWorkout() {
+      const title = document.getElementById("wo-title");
+      if (!title.value.trim()) return;
+      await api("/api/workouts", {
+        method: "POST",
+        body: JSON.stringify({
+          title: title.value.trim(),
+          sport_type: document.getElementById("wo-sport").value.trim() || "Тренування",
+          distance_km: parseFloat(document.getElementById("wo-dist").value) || 0,
+          duration_min: parseFloat(document.getElementById("wo-dur").value) || 0,
+          source: document.getElementById("wo-source").value.trim() || "Strava",
+        }),
+      });
+      title.value = "";
+      document.getElementById("wo-dist").value = "";
+      document.getElementById("wo-dur").value = "";
+      loadWorkouts();
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    loadHabits();
+    loadMeals();
+  </script>
+</body>
+</html>
